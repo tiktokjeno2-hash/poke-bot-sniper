@@ -1,0 +1,13 @@
+{
+  "name": "poke-sniper-ultimate",
+  "version": "1.0.0",
+  "description": "PokéTracker Sniper Bot",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  }
+}

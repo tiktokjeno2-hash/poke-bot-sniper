@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poké Tracker Ultra - $150 Sniper</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Inter:wght@400;700&display=swap');
+        
+        :root { 
+            --red: #ff1f1f; --gold: #fbbf24; --bg: #0f172a; --panel: #1e293b;
+            --Shiny: #f43f5e; --Platinum: #a855f7; --Gold: #fbbf24; --Silver: #94a3b8; --Bronze: #64748b; 
+        }
+
+        body { background: var(--bg); color: white; font-family: 'Chakra Petch', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .pokedex { background: #2b2b2b; width: 550px; border-radius: 25px; border: 6px solid #111; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.6); }
+        .header { background: var(--red); padding: 15px; text-align: center; font-size: 1rem; letter-spacing: 2px; text-shadow: 1px 1px #000; border-bottom: 4px solid #111; }
+        
+        .screen { background: #f8fafc; margin: 20px 20px 15px; border-radius: 15px; padding: 15px; color: #111; text-align: center; border: 4px solid #444; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); }
+        .main-num { font-size: 6.5rem; font-weight: 900; line-height: 1; margin: 0; font-family: 'Inter', sans-serif; letter-spacing: -3px; }
+        .lvl { color: var(--red); font-size: 1.1rem; font-weight: bold; margin-bottom: -5px; }
+
+        .predict-banner { background: #111; margin: 0 20px 15px; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #333; font-size: 0.75rem; letter-spacing: 1px; color: #94a3b8; display: flex; justify-content: center; align-items: center; gap: 10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .predict-val { font-size: 1.2rem; font-weight: 900; color: #fff; text-transform: uppercase; }
+
+        .radar-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 0 20px 15px; }
+        .radar-box { background: #111; padding: 15px; border-radius: 12px; text-align: center; border: 2px solid #333; }
+        .r-val { font-size: 2.8rem; font-weight: 900; line-height: 1; font-family: 'Inter', sans-serif; letter-spacing: -1px; }
+
+        .prize-bar { background: var(--panel); margin: 0 20px 15px; padding: 10px; border-radius: 10px; display: flex; align-items: center; gap: 15px; border: 1px solid #334155; }
+        .prize-img { width: 60px; height: 80px; object-fit: contain; border-radius: 5px; background: #000; border: 1px solid #444; }
+        
+        /* 🟢 โซน CSS ของกล่องเปอเซ็นต์และ Tooltip */
+        .prob-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 0 20px 15px; }
+        .prob-b { background: #111; padding: 8px 5px; border-radius: 8px; text-align: center; border: 1px solid #222; font-size: 0.6rem; position: relative; cursor: help; }
+        .prob-b:hover { background: #1a1a1a; }
+        
+        .tooltip {
+            position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+            background: #111827; border: 1px solid #374151; padding: 12px; border-radius: 8px;
+            width: 140px; box-shadow: 0 10px 25px rgba(0,0,0,0.9);
+            display: none; z-index: 100; text-align: left; pointer-events: none;
+        }
+        .prob-b:hover .tooltip { display: block; }
+        .tt-title { font-size: 0.65rem; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #374151; padding-bottom: 5px; display: flex; justify-content: space-between; }
+        .tt-row { display: flex; justify-content: space-between; font-size: 0.55rem; margin-bottom: 6px; color: #94a3b8; font-family: 'Inter', sans-serif;}
+        .stat-mini { font-size: 0.5rem; color: #94a3b8; margin-top: 5px; border-top: 1px solid #333; padding-top: 4px; }
+
+        /* 🟢 โซน CSS ลากเลื่อนหน้าจอ */
+        .feed { display: flex; gap: 10px; overflow-x: auto; padding: 0 20px 15px; scrollbar-width: none; cursor: grab; }
+        .feed::-webkit-scrollbar { display: none; }
+        .feed:active { cursor: grabbing; }
+        .card { flex: 0 0 100px; background: #1a1a1a; border-radius: 8px; border: 1px solid #333; padding: 8px; position: relative; text-align: center; user-select: none; }
+        .card img { pointer-events: none; }
+        .badge { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); font-size: 0.5rem; padding: 2px 8px; border-radius: 5px; font-weight: bold; color: white; text-transform: uppercase; z-index: 5; }
+        
+        .danger { color: var(--red) !important; animation: pulse-red 0.6s infinite; }
+        @keyframes pulse-red { 50% { opacity: 0.5; text-shadow: 0 0 10px var(--red); } }
+        .scanning { animation: pulse-scan 1.5s infinite; }
+        @keyframes pulse-scan { 50% { opacity: 0.4; } }
+        
+        .b-Shiny { background: var(--Shiny); box-shadow: 0 0 8px var(--Shiny); } 
+        .b-Platinum { background: var(--Platinum); } 
+        .b-Gold { background: var(--Gold); color: black; } 
+        .b-Silver { background: var(--Silver); } 
+        .b-Bronze { background: var(--Bronze); }
+    </style>
+</head>
+<body>
+
+<div class="pokedex">
+    <div class="header">POKÉ TRACKER ULTRA - SNIPER MODE</div>
+
+    <div class="screen">
+        <div class="lvl">LEVEL <span id="stage">0</span></div>
+        <div id="count" class="main-num">0</div>
+        <div style="font-size: 1rem; font-weight: bold; margin-top: 5px; color: #475569; border-top: 2px solid #cbd5e1; padding-top: 5px;">OPENS WITHOUT WIN</div>
+    </div>
+
+    <div class="predict-banner">
+        <span class="scanning">🎯</span> 
+        PREDICTED NEXT DROP: 
+        <span id="prediction" class="predict-val">SCANNING...</span>
+    </div>
+
+    <div class="radar-group">
+        <div class="radar-box">
+            <div style="font-size:0.65rem; color:#666;">TARGET GOAL</div>
+            <div id="target" class="r-val" style="color:#fff">0</div>
+        </div>
+        <div class="radar-box">
+            <div style="font-size:0.65rem; color:var(--gold);">COUNTDOWN TO BONUS</div>
+            <div id="cd" class="r-val" style="color:var(--gold)">0</div>
+        </div>
+    </div>
+
+    <div class="prize-bar">
+        <img id="prize_img" class="prize-img" src="" onerror="this.src='https://via.placeholder.com/60x80/000/fff?text=?'">
+        <div style="overflow: hidden; flex: 1;">
+            <div style="font-size: 0.55rem; color: #94a3b8;">CURRENT SNIPE TARGET</div>
+            <div id="prize_name" style="font-size: 0.8rem; font-weight: bold; color: var(--gold); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Scanning...</div>
+        </div>
+    </div>
+
+    <div class="prob-grid" id="prob-container"></div>
+
+    <div class="feed" id="feed"></div>
+
+    <div style="padding: 12px 20px; font-size: 0.65rem; color: #444; background: #000; display: flex; justify-content: space-between; border-top: 1px solid #222;">
+        <span style="color: #22c55e; font-weight: bold;">⚡ API STATUS: SYNCED</span>
+        <span id="total">DETECTED: 0 CARDS</span>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const tiers = ['Shiny', 'Platinum', 'Gold', 'Silver', 'Bronze'];
+    const colors = { 'Shiny': 'var(--Shiny)', 'Platinum': 'var(--Platinum)', 'Gold': 'var(--Gold)', 'Silver': 'var(--Silver)', 'Bronze': 'var(--Bronze)' };
+
+    // สร้างกล่องสถิติเริ่มต้น
+    const probContainer = document.getElementById('prob-container');
+    tiers.forEach(t => {
+        let shortName = t === 'Shiny' ? 'SHINY' : t === 'Platinum' ? 'PLAT' : t === 'Gold' ? 'GOLD' : t === 'Silver' ? 'SILV' : 'BRON';
+        probContainer.innerHTML += `
+            <div class="prob-b">
+                <div>${shortName}</div>
+                <div id="p-${t}" style="font-size: 0.9rem; font-weight: bold; color:${colors[t]}">0%</div>
+                <div id="mini-${t}" class="stat-mini">-</div>
+                
+                <div class="tooltip">
+                    <div class="tt-title"><span style="color:${colors[t]}">${t}</span> <span id="tt-pct-${t}">0%</span></div>
+                    <div class="tt-row"><span style="color:#fff; background:#333; padding:2px 5px; border-radius:3px; font-weight:bold;" id="tt-st-${t}">...</span></div>
+                    <div class="tt-row"><span>ผ่านมาแล้ว</span> <span id="tt-pass-${t}" style="color:#fff">0 ใบ</span></div>
+                    <div class="tt-row"><span>ค่าเฉลี่ย</span> <span id="tt-avg-${t}" style="color:#fff">~0 ใบ</span></div>
+                    <div class="tt-row" style="color:var(--gold); border-top:1px dashed #444; padding-top:5px; margin-top:5px;"><span>คาดออกอีก</span> <span id="tt-rem-${t}" style="font-weight:bold;">~0 ใบ</span></div>
+                </div>
+            </div>
+        `;
+    });
+
+    socket.on('update_data', (d) => {
+        const s = d.status;
+        document.getElementById('count').innerText = s.since;
+        document.getElementById('stage').innerText = s.stage;
+        document.getElementById('target').innerText = s.target;
+        
+        const rem = s.target - s.since;
+        const cdEl = document.getElementById('cd');
+        cdEl.innerText = rem > 0 ? rem : "DUE!";
+        cdEl.className = rem <= 30 ? "r-val danger" : "r-val";
+
+        document.getElementById('prize_name').innerText = s.prizeName;
+        if(s.prizeImg) document.getElementById('prize_img').src = s.prizeImg;
+
+        // อัปเดต % เทรนด์
+        if (d.probs) {
+            for (let t in d.probs) {
+                document.getElementById('p-' + t).innerText = d.probs[t] + '%';
+                document.getElementById('tt-pct-' + t).innerText = d.probs[t] + '%';
+            }
+        }
+
+        // 🟢 อัปเดตข้อมูลจำนวนใบและสีป้ายเตือน
+        if (d.stats) {
+            for (let t in d.stats) {
+                let st = d.stats[t];
+                
+                // 1. จัดการข้อความเล็กๆ ใต้เปอร์เซ็นต์
+                let miniText = "";
+                if (st.colorCode === 'danger') {
+                    miniText = `<span style="color:var(--red); font-weight:bold; animation: pulse-red 1s infinite;">🚨 เลยกำหนด!</span>`;
+                } else if (st.colorCode === 'warning') {
+                    miniText = `<span style="color:var(--gold)">⚡ จะมาเร็วๆ นี้</span>`;
+                } else {
+                    miniText = `<span style="color:#94a3b8">🔻 อีก ~${st.remaining} ใบ</span>`;
+                }
+                document.getElementById('mini-' + t).innerHTML = miniText;
+                
+                // 2. จัดการสีป้าย Tag ใน Tooltip แบบในรูปเป๊ะๆ
+                let badgeBg = "#333";
+                let badgeColor = "#fff";
+                if(st.colorCode === 'danger') { 
+                    badgeBg = "var(--red)"; 
+                    badgeColor = "#fff"; 
+                } else if(st.colorCode === 'warning') { 
+                    badgeBg = "var(--gold)"; 
+                    badgeColor = "#000"; 
+                } else if(st.colorCode === 'early') { 
+                    badgeBg = "#222"; 
+                    badgeColor = "#64748b"; 
+                }
+
+                document.getElementById('tt-st-' + t).innerText = st.status;
+                document.getElementById('tt-st-' + t).style.background = badgeBg;
+                document.getElementById('tt-st-' + t).style.color = badgeColor;
+                
+                document.getElementById('tt-pass-' + t).innerText = st.passed + ' ใบ';
+                document.getElementById('tt-avg-' + t).innerText = '~' + st.average + ' ใบ';
+                document.getElementById('tt-rem-' + t).innerText = '~' + st.remaining + ' ใบ';
+            }
+        }
+
+        // อัปเดตคำทำนาย
+        const predEl = document.getElementById('prediction');
+        if (d.top && d.top !== "---") {
+            predEl.innerText = d.top;
+            predEl.style.color = colors[d.top] || '#fff';
+        }
+
+        // อัปเดตหน้าฟีดรูปภาพ
+        const feed = document.getElementById('feed');
+        feed.innerHTML = '';
+        d.cards.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'card';
+            const priceText = c.price > 0 ? '$' + Number(c.price).toLocaleString() : '-';
+            item.innerHTML = `
+                <div class="badge b-${c.tier}">${c.tier}</div>
+                <img draggable="false" src="${c.img}" style="width:100%; height:120px; border-radius:4px; object-fit:contain; margin-top:5px; background: #000;" onerror="this.src='https://via.placeholder.com/100x140/111/444?text=Error'">
+                <div style="font-size:0.45rem; color:#94a3b8; height:12px; overflow:hidden; margin-top:5px; text-transform:uppercase; font-family:sans-serif;">${c.name}</div>
+                <div style="font-size:0.75rem; color:var(--gold); font-weight:bold; margin-top:3px; font-family:'Inter', sans-serif;">${priceText}</div>
+            `;
+            feed.appendChild(item);
+        });
+        document.getElementById('total').innerText = 'DETECTED: ' + d.cards.length + ' CARDS';
+    });
+
+    // 🟢 ระบบลากเลื่อนหน้าจอ
+    const feedElement = document.getElementById('feed');
+    let isDown = false; let startX; let scrollLeft;
+    feedElement.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX - feedElement.offsetLeft; scrollLeft = feedElement.scrollLeft; });
+    feedElement.addEventListener('mouseleave', () => { isDown = false; });
+    feedElement.addEventListener('mouseup', () => { isDown = false; });
+    feedElement.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - feedElement.offsetLeft;
+        const walk = (x - startX) * 1.5; 
+        feedElement.scrollLeft = scrollLeft - walk;
+    });
+</script>
+</body>
+</html>
