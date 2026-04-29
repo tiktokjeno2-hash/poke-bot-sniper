@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poké Tracker Ultra - $150 Sniper</title>
+    <title>Poké Tracker Ultra - Multi Sniper</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Inter:wght@400;700&display=swap');
         
@@ -13,8 +13,11 @@
         }
 
         body { background: var(--bg); color: white; font-family: 'Chakra Petch', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .pokedex { background: #2b2b2b; width: 550px; border-radius: 25px; border: 6px solid #111; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.6); }
-        .header { background: var(--red); padding: 15px; text-align: center; font-size: 1rem; letter-spacing: 2px; text-shadow: 1px 1px #000; border-bottom: 4px solid #111; }
+        .pokedex { background: #2b2b2b; width: 550px; border-radius: 25px; border: 6px solid #111; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.6); position: relative; margin: 20px 0;}
+        .header { background: var(--red); padding: 15px; text-align: center; font-size: 1rem; letter-spacing: 2px; text-shadow: 1px 1px #000; border-bottom: 4px solid #111; display:flex; justify-content: space-between; align-items: center;}
+        
+        /* 🟢 ระบบ Dropdown เลือกแพ็ค */
+        .pack-selector { background: #111; color: var(--gold); border: 2px solid #000; padding: 5px 10px; border-radius: 8px; font-family: 'Chakra Petch'; font-weight: bold; font-size: 0.8rem; outline: none; cursor: pointer; box-shadow: inset 0 0 5px rgba(0,0,0,0.8); }
         
         .screen { background: #f8fafc; margin: 20px 20px 15px; border-radius: 15px; padding: 15px; color: #111; text-align: center; border: 4px solid #444; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); }
         .main-num { font-size: 6.5rem; font-weight: 900; line-height: 1; margin: 0; font-family: 'Inter', sans-serif; letter-spacing: -3px; }
@@ -27,26 +30,24 @@
         .radar-box { background: #111; padding: 15px; border-radius: 12px; text-align: center; border: 2px solid #333; }
         .r-val { font-size: 2.8rem; font-weight: 900; line-height: 1; font-family: 'Inter', sans-serif; letter-spacing: -1px; }
 
-        .prize-bar { background: var(--panel); margin: 0 20px 15px; padding: 10px; border-radius: 10px; display: flex; align-items: center; gap: 15px; border: 1px solid #334155; }
-        .prize-img { width: 60px; height: 80px; object-fit: contain; border-radius: 5px; background: #000; border: 1px solid #444; }
+        .prize-bar { background: var(--panel); margin: 0 20px 15px; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-direction: column; }
+        .prize-top { display: flex; align-items: center; gap: 15px; }
+        .prize-img { width: 50px; height: 70px; object-fit: contain; border-radius: 5px; background: #000; border: 1px solid #444; }
         
-        /* 🟢 โซน CSS ของกล่องเปอเซ็นต์และ Tooltip */
+        .bonus-progress { margin-top: 15px; background: #0f172a; border-radius: 20px; height: 12px; position: relative; overflow: hidden; border: 1px solid #334155; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .bonus-fill { background: var(--gold); height: 100%; width: 0%; transition: width 0.5s ease-out, background-color 0.5s; }
+        .mark-90 { position: absolute; left: 90%; top: 0; bottom: 0; width: 2px; background: var(--red); z-index: 2; box-shadow: 0 0 5px var(--red); }
+        
         .prob-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 0 20px 15px; }
         .prob-b { background: #111; padding: 8px 5px; border-radius: 8px; text-align: center; border: 1px solid #222; font-size: 0.6rem; position: relative; cursor: help; }
         .prob-b:hover { background: #1a1a1a; }
         
-        .tooltip {
-            position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
-            background: #111827; border: 1px solid #374151; padding: 12px; border-radius: 8px;
-            width: 140px; box-shadow: 0 10px 25px rgba(0,0,0,0.9);
-            display: none; z-index: 100; text-align: left; pointer-events: none;
-        }
+        .tooltip { position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #111827; border: 1px solid #374151; padding: 12px; border-radius: 8px; width: 140px; box-shadow: 0 10px 25px rgba(0,0,0,0.9); display: none; z-index: 100; text-align: left; pointer-events: none; }
         .prob-b:hover .tooltip { display: block; }
         .tt-title { font-size: 0.65rem; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #374151; padding-bottom: 5px; display: flex; justify-content: space-between; }
         .tt-row { display: flex; justify-content: space-between; font-size: 0.55rem; margin-bottom: 6px; color: #94a3b8; font-family: 'Inter', sans-serif;}
         .stat-mini { font-size: 0.5rem; color: #94a3b8; margin-top: 5px; border-top: 1px solid #333; padding-top: 4px; }
 
-        /* 🟢 โซน CSS ลากเลื่อนหน้าจอ */
         .feed { display: flex; gap: 10px; overflow-x: auto; padding: 0 20px 15px; scrollbar-width: none; cursor: grab; }
         .feed::-webkit-scrollbar { display: none; }
         .feed:active { cursor: grabbing; }
@@ -59,17 +60,18 @@
         .scanning { animation: pulse-scan 1.5s infinite; }
         @keyframes pulse-scan { 50% { opacity: 0.4; } }
         
-        .b-Shiny { background: var(--Shiny); box-shadow: 0 0 8px var(--Shiny); } 
-        .b-Platinum { background: var(--Platinum); } 
-        .b-Gold { background: var(--Gold); color: black; } 
-        .b-Silver { background: var(--Silver); } 
-        .b-Bronze { background: var(--Bronze); }
+        .b-Shiny { background: var(--Shiny); box-shadow: 0 0 8px var(--Shiny); } .b-Platinum { background: var(--Platinum); } .b-Gold { background: var(--Gold); color: black; } .b-Silver { background: var(--Silver); } .b-Bronze { background: var(--Bronze); }
     </style>
 </head>
 <body>
 
 <div class="pokedex">
-    <div class="header">POKÉ TRACKER ULTRA - SNIPER MODE</div>
+    <div class="header">
+        <div>POKÉ TRACKER ULTRA</div>
+        <select id="pack-selector" class="pack-selector">
+            <option value="">Loading...</option>
+        </select>
+    </div>
 
     <div class="screen">
         <div class="lvl">LEVEL <span id="stage">0</span></div>
@@ -78,32 +80,33 @@
     </div>
 
     <div class="predict-banner">
-        <span class="scanning">🎯</span> 
-        PREDICTED NEXT DROP: 
-        <span id="prediction" class="predict-val">SCANNING...</span>
+        <span class="scanning">🎯</span> PREDICTED NEXT DROP: <span id="prediction" class="predict-val">SCANNING...</span>
     </div>
 
     <div class="radar-group">
-        <div class="radar-box">
-            <div style="font-size:0.65rem; color:#666;">TARGET GOAL</div>
-            <div id="target" class="r-val" style="color:#fff">0</div>
-        </div>
-        <div class="radar-box">
-            <div style="font-size:0.65rem; color:var(--gold);">COUNTDOWN TO BONUS</div>
-            <div id="cd" class="r-val" style="color:var(--gold)">0</div>
-        </div>
+        <div class="radar-box"><div style="font-size:0.65rem; color:#666;">TARGET GOAL</div><div id="target" class="r-val" style="color:#fff">0</div></div>
+        <div class="radar-box"><div style="font-size:0.65rem; color:var(--gold);">COUNTDOWN TO BONUS</div><div id="cd" class="r-val" style="color:var(--gold)">0</div></div>
     </div>
 
     <div class="prize-bar">
-        <img id="prize_img" class="prize-img" src="" onerror="this.src='https://via.placeholder.com/60x80/000/fff?text=?'">
-        <div style="overflow: hidden; flex: 1;">
-            <div style="font-size: 0.55rem; color: #94a3b8;">CURRENT SNIPE TARGET</div>
-            <div id="prize_name" style="font-size: 0.8rem; font-weight: bold; color: var(--gold); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Scanning...</div>
+        <div class="prize-top">
+            <img id="prize_img" class="prize-img" src="" onerror="this.src='https://via.placeholder.com/60x80/000/fff?text=?'">
+            <div style="overflow: hidden; flex: 1;">
+                <div style="font-size: 0.55rem; color: #94a3b8;">CURRENT SNIPE TARGET</div>
+                <div id="prize_name" style="font-size: 0.85rem; font-weight: bold; color: var(--gold); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Scanning...</div>
+            </div>
+        </div>
+        <div class="bonus-progress">
+            <div id="b-fill" class="bonus-fill"></div>
+            <div class="mark-90" title="90% Safe Zone"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.6rem; margin-top: 8px; font-weight: bold;">
+            <span id="b-msg">กำลังวิเคราะห์ความปลอดภัย...</span>
+            <span id="b-pct" style="color: #fff;">0%</span>
         </div>
     </div>
 
     <div class="prob-grid" id="prob-container"></div>
-
     <div class="feed" id="feed"></div>
 
     <div style="padding: 12px 20px; font-size: 0.65rem; color: #444; background: #000; display: flex; justify-content: space-between; border-top: 1px solid #222;">
@@ -118,7 +121,6 @@
     const tiers = ['Shiny', 'Platinum', 'Gold', 'Silver', 'Bronze'];
     const colors = { 'Shiny': 'var(--Shiny)', 'Platinum': 'var(--Platinum)', 'Gold': 'var(--Gold)', 'Silver': 'var(--Silver)', 'Bronze': 'var(--Bronze)' };
 
-    // สร้างกล่องสถิติเริ่มต้น
     const probContainer = document.getElementById('prob-container');
     tiers.forEach(t => {
         let shortName = t === 'Shiny' ? 'SHINY' : t === 'Platinum' ? 'PLAT' : t === 'Gold' ? 'GOLD' : t === 'Silver' ? 'SILV' : 'BRON';
@@ -127,7 +129,6 @@
                 <div>${shortName}</div>
                 <div id="p-${t}" style="font-size: 0.9rem; font-weight: bold; color:${colors[t]}">0%</div>
                 <div id="mini-${t}" class="stat-mini">-</div>
-                
                 <div class="tooltip">
                     <div class="tt-title"><span style="color:${colors[t]}">${t}</span> <span id="tt-pct-${t}">0%</span></div>
                     <div class="tt-row"><span style="color:#fff; background:#333; padding:2px 5px; border-radius:3px; font-weight:bold;" id="tt-st-${t}">...</span></div>
@@ -139,7 +140,36 @@
         `;
     });
 
-    socket.on('update_data', (d) => {
+    let currentPack = "pack1"; // ค่าเริ่มต้น
+    let lastData = null;
+
+    // 🟢 เมื่อมีการเปลี่ยนแพ็คใน Dropdown
+    document.getElementById('pack-selector').addEventListener('change', (e) => {
+        currentPack = e.target.value;
+        if(lastData) renderScreen(lastData.data[currentPack]); 
+    });
+
+    socket.on('update_data', (payload) => {
+        lastData = payload;
+        
+        const selector = document.getElementById('pack-selector');
+        if(selector.options.length <= 1) {
+            selector.innerHTML = "";
+            for(let id in payload.packs) {
+                let opt = document.createElement('option');
+                opt.value = id; opt.innerText = payload.packs[id].name;
+                selector.appendChild(opt);
+            }
+            selector.value = currentPack; 
+        }
+
+        if(payload.data[currentPack]) {
+            renderScreen(payload.data[currentPack]);
+        }
+    });
+
+    // 🟢 ฟังก์ชันวาดข้อมูลลงหน้าจอ
+    function renderScreen(d) {
         const s = d.status;
         document.getElementById('count').innerText = s.since;
         document.getElementById('stage').innerText = s.stage;
@@ -153,7 +183,20 @@
         document.getElementById('prize_name').innerText = s.prizeName;
         if(s.prizeImg) document.getElementById('prize_img').src = s.prizeImg;
 
-        // อัปเดต % เทรนด์
+        if (d.bonus) {
+            const fill = document.getElementById('b-fill');
+            const msg = document.getElementById('b-msg');
+            const pct = document.getElementById('b-pct');
+            
+            fill.style.width = d.bonus.percent + '%';
+            fill.style.backgroundColor = d.bonus.color;
+            msg.innerText = d.bonus.status;
+            msg.style.color = d.bonus.color;
+            pct.innerText = d.bonus.percent + '%';
+            if(d.bonus.percent >= 90) pct.style.color = "var(--red)";
+            else pct.style.color = "#fff";
+        }
+
         if (d.probs) {
             for (let t in d.probs) {
                 document.getElementById('p-' + t).innerText = d.probs[t] + '%';
@@ -161,54 +204,35 @@
             }
         }
 
-        // 🟢 อัปเดตข้อมูลจำนวนใบและสีป้ายเตือน
         if (d.stats) {
             for (let t in d.stats) {
                 let st = d.stats[t];
-                
-                // 1. จัดการข้อความเล็กๆ ใต้เปอร์เซ็นต์
                 let miniText = "";
-                if (st.colorCode === 'danger') {
-                    miniText = `<span style="color:var(--red); font-weight:bold; animation: pulse-red 1s infinite;">🚨 เลยกำหนด!</span>`;
-                } else if (st.colorCode === 'warning') {
-                    miniText = `<span style="color:var(--gold)">⚡ จะมาเร็วๆ นี้</span>`;
-                } else {
-                    miniText = `<span style="color:#94a3b8">🔻 อีก ~${st.remaining} ใบ</span>`;
-                }
+                if (st.colorCode === 'danger') miniText = `<span style="color:var(--red); font-weight:bold; animation: pulse-red 1s infinite;">🚨 เลยกำหนด!</span>`;
+                else if (st.colorCode === 'warning') miniText = `<span style="color:var(--gold)">⚡ จะมาเร็วๆ นี้</span>`;
+                else miniText = `<span style="color:#94a3b8">🔻 อีก ~${st.remaining} ใบ</span>`;
                 document.getElementById('mini-' + t).innerHTML = miniText;
                 
-                // 2. จัดการสีป้าย Tag ใน Tooltip แบบในรูปเป๊ะๆ
-                let badgeBg = "#333";
-                let badgeColor = "#fff";
-                if(st.colorCode === 'danger') { 
-                    badgeBg = "var(--red)"; 
-                    badgeColor = "#fff"; 
-                } else if(st.colorCode === 'warning') { 
-                    badgeBg = "var(--gold)"; 
-                    badgeColor = "#000"; 
-                } else if(st.colorCode === 'early') { 
-                    badgeBg = "#222"; 
-                    badgeColor = "#64748b"; 
-                }
+                let badgeBg = "#333"; let badgeColor = "#fff";
+                if(st.colorCode === 'danger') { badgeBg = "var(--red)"; badgeColor = "#fff"; }
+                else if(st.colorCode === 'warning') { badgeBg = "var(--gold)"; badgeColor = "#000"; }
+                else if(st.colorCode === 'early') { badgeBg = "#222"; badgeColor = "#64748b"; }
 
                 document.getElementById('tt-st-' + t).innerText = st.status;
                 document.getElementById('tt-st-' + t).style.background = badgeBg;
                 document.getElementById('tt-st-' + t).style.color = badgeColor;
-                
                 document.getElementById('tt-pass-' + t).innerText = st.passed + ' ใบ';
                 document.getElementById('tt-avg-' + t).innerText = '~' + st.average + ' ใบ';
                 document.getElementById('tt-rem-' + t).innerText = '~' + st.remaining + ' ใบ';
             }
         }
 
-        // อัปเดตคำทำนาย
         const predEl = document.getElementById('prediction');
         if (d.top && d.top !== "---") {
             predEl.innerText = d.top;
             predEl.style.color = colors[d.top] || '#fff';
         }
 
-        // อัปเดตหน้าฟีดรูปภาพ
         const feed = document.getElementById('feed');
         feed.innerHTML = '';
         d.cards.forEach(c => {
@@ -224,9 +248,8 @@
             feed.appendChild(item);
         });
         document.getElementById('total').innerText = 'DETECTED: ' + d.cards.length + ' CARDS';
-    });
+    }
 
-    // 🟢 ระบบลากเลื่อนหน้าจอ
     const feedElement = document.getElementById('feed');
     let isDown = false; let startX; let scrollLeft;
     feedElement.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX - feedElement.offsetLeft; scrollLeft = feedElement.scrollLeft; });
