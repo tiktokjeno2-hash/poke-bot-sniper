@@ -15,48 +15,42 @@ const BASE_URL = "https://shiny.com";
 // 🎯 ตั้งค่าเป้าหมายทั้งหมด (Multi-Target Radar)
 // ==========================================
 const TARGET_PACKS = {
-    "pack1": {
-        name: "🔰 Beginner Pack",
-        urlPulls: "https://shiny.com/api/pack/11/recent-pulls",
-        urlStatus: "https://shiny.com/api/jackpot/state?tier=1500&tcgType=Pokemon"
-    },
-    "pack2": {
-        name: "⚔️ Starter Pack",
-        urlPulls: "https://shiny.com/api/pack/3/recent-pulls",
-        urlStatus: "https://shiny.com/api/jackpot/state?tier=2500&tcgType=Pokemon"
-    },
-    "pack3": {
-        name: "🔥 Pro Pack",
-        urlPulls: "https://shiny.com/api/pack/4/recent-pulls",
-        urlStatus: "https://shiny.com/api/jackpot/state?tier=5000&tcgType=Pokemon"
-    },
-    "pack4": {
-        name: "👑 OP Pack",
-        urlPulls: "https://shiny.com/api/pack/12/recent-pulls",
-        urlStatus: "https://shiny.com/api/pack/12/latest-shiny" 
-    }
+    "pack1": { name: "🔰 Beginner Pack", urlPulls: "https://shiny.com/api/pack/11/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=1500&tcgType=Pokemon" },
+    "pack2": { name: "⚔️ Starter Pack", urlPulls: "https://shiny.com/api/pack/3/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=2500&tcgType=Pokemon" },
+    "pack3": { name: "🔥 Pro Pack", urlPulls: "https://shiny.com/api/pack/4/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=5000&tcgType=Pokemon" },
+    "pack4": { name: "👑 OP Pack", urlPulls: "https://shiny.com/api/pack/12/recent-pulls", urlStatus: "https://shiny.com/api/pack/12/latest-shiny" }
 };
 // ==========================================
 
 const tierMap = { 'S': 'Shiny', 'A': 'Platinum', 'B': 'Gold', 'C': 'Silver', 'D': 'Bronze', 'Shiny': 'Shiny', 'Platinum': 'Platinum', 'Gold': 'Gold', 'Silver': 'Silver', 'Bronze': 'Bronze' };
 const defaultOdds = { 'Shiny': 0.005, 'Platinum': 0.062, 'Gold': 0.433, 'Silver': 0.075, 'Bronze': 0.425 };
 
-// สร้างหน่วยความจำแยกให้แต่ละแพ็ค
+// 🟢 เพิ่มหน่วยความจำประวัติโบนัส (bonusHistory) ให้แต่ละแพ็ค
 let appState = {};
 for (let id in TARGET_PACKS) {
     appState[id] = {
         lastPullId: 0,
         odds: { ...defaultOdds },
         status: { since: 0, target: 200, stage: 0, prizeName: "", prizeImg: "" },
-        cards: []
+        cards: [],
+        bonusHistory: [] // เก็บประวัติโบนัสที่แตกไปแล้ว
     };
 }
 
-// โหลดประวัติเก่าถ้ามี
+// 🟢 ระบบโหลดเซฟ (ดัดแปลงให้รองรับการเซฟประวัติโบนัสด้วย)
 if (fs.existsSync(HISTORY_FILE)) {
     try {
         let saved = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
-        for(let id in saved) { if(appState[id]) appState[id].cards = saved[id]; }
+        for(let id in saved) { 
+            if(appState[id]) {
+                if (Array.isArray(saved[id])) { // รองรับไฟล์เซฟเก่า
+                    appState[id].cards = saved[id];
+                } else { // ไฟล์เซฟเวอร์ชันใหม่
+                    appState[id].cards = saved[id].cards || [];
+                    appState[id].bonusHistory = saved[id].bonusHistory || [];
+                }
+            }
+        }
     } catch (e) {}
 }
 
@@ -157,16 +151,30 @@ async function fetchData() {
             if (resStatus && resStatus.ok) {
                 const s = await resStatus.json();
                 let bonusImg = "";
-                // รองรับ API ที่แตกต่างกันบางแพ็ค
                 if (s.prizeCard && s.prizeCard.thumbnailUrl) {
                     bonusImg = s.prizeCard.thumbnailUrl.startsWith('http') ? s.prizeCard.thumbnailUrl : BASE_URL + s.prizeCard.thumbnailUrl;
+                }
+                
+                // 🟢 ระบบตรวจจับโบนัสแตก (ถ้าจำนวนใบถูกรีเซ็ตลดลงอย่างฮวบฮาบ = โบนัสแตกแล้ว!)
+                let newSince = s.opensWithoutWin !== undefined ? s.opensWithoutWin : appState[id].status.since;
+                let oldSince = appState[id].status.since;
+                
+                if (oldSince > 10 && newSince < oldSince && (oldSince - newSince > 10)) {
+                    appState[id].bonusHistory.unshift({
+                        time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                        name: appState[id].status.prizeName || "Bonus",
+                        img: appState[id].status.prizeImg, // เอารูปเป้าหมายก่อนหน้านี้มาโชว์
+                        at: oldSince // แตกที่กี่ใบ
+                    });
+                    // เก็บประวัติย้อนหลัง 5 รอบล่าสุด
+                    if (appState[id].bonusHistory.length > 5) appState[id].bonusHistory.pop(); 
                 }
                 
                 if (s.odds) {
                     appState[id].odds = { 'Shiny': s.odds.S || defaultOdds.Shiny, 'Platinum': s.odds.A || defaultOdds.Platinum, 'Gold': s.odds.B || defaultOdds.Gold, 'Silver': s.odds.C || defaultOdds.Silver, 'Bronze': s.odds.D || defaultOdds.Bronze };
                 }
                 appState[id].status = {
-                    since: s.opensWithoutWin !== undefined ? s.opensWithoutWin : appState[id].status.since,
+                    since: newSince,
                     target: s.nextStageAt || appState[id].status.target,
                     stage: s.stage !== undefined ? s.stage : appState[id].status.stage,
                     prizeName: (s.prizeCard && s.prizeCard.name) ? s.prizeCard.name : appState[id].status.prizeName || "Target Bonus",
@@ -193,10 +201,12 @@ async function fetchData() {
         } catch (e) { /* ข้ามแพ็คที่ API มีปัญหาไปก่อน */ }
     }
     
-    // บันทึกและส่งข้อมูลให้หน้าเว็บทั้งหมดทุกแพ็ค
-    let cardsOnly = {};
-    for(let id in appState) cardsOnly[id] = appState[id].cards;
-    fs.writeFileSync(HISTORY_FILE, JSON.stringify(cardsOnly));
+    // 🟢 บันทึกข้อมูลและประวัติโบนัสทั้งหมดลงไฟล์ (จะได้ไม่หายตอนบอทรีสตาร์ท)
+    let toSave = {};
+    for(let id in appState) {
+        toSave[id] = { cards: appState[id].cards, bonusHistory: appState[id].bonusHistory };
+    }
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(toSave));
     sendUpdate();
 }
 
@@ -212,7 +222,8 @@ function sendUpdate() {
         payload.data[id] = {
             status: appState[id].status,
             cards: appState[id].cards.slice(0, 30),
-            probs: probs, stats: stats, bonus: bonus, top: top
+            probs: probs, stats: stats, bonus: bonus, top: top,
+            bonusHistory: appState[id].bonusHistory // 🟢 ส่งประวัติให้หน้าเว็บ
         };
     }
     io.emit('update_data', payload);
@@ -221,6 +232,5 @@ function sendUpdate() {
 setInterval(fetchData, 3000);
 fetchData();
 
-// 🟢 ให้ระบบคลาวด์เลือก Port ให้อัตโนมัติ
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 PokéTracker Multi-Target Live on port ${PORT}!`));
+server.listen(PORT, () => console.log(`🚀 PokéTracker Multi-Target + History Tracker Live!`));
