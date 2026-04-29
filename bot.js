@@ -131,7 +131,7 @@ function processItem(id, item) {
     let imgUrl = item.thumbnailUrl || item.image || "https://via.placeholder.com/100x140?text=No+Img";
     if (!imgUrl.startsWith('http')) imgUrl = BASE_URL + imgUrl;
     
-    // 🟢 ดักจับชื่อคนเปิดจาก API (ครอบคลุมหลายรูปแบบที่เว็บอาจจะส่งมา)
+    // 🟢 ดักจับชื่อคนเปิดจาก API
     const pullerName = item.username || (item.user && item.user.username) || item.playerName || item.nickname || "Anonymous";
 
     appState[id].cards.unshift({
@@ -139,7 +139,7 @@ function processItem(id, item) {
         img: imgUrl, 
         price: item.worth || item.value || item.price || 0, 
         name: item.cardName || item.name || "Unknown Card",
-        puller: pullerName // ส่งชื่อคนเปิดไปหน้าเว็บ
+        puller: pullerName
     });
     if (appState[id].cards.length > MAX_MEMORY) appState[id].cards.pop();
 }
@@ -168,7 +168,7 @@ async function fetchData() {
                     const thaiTime = new Date().toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
                     
                     appState[id].bonusHistory.unshift({
-                        time: thaiTime, // บันทึกเวลาไทย
+                        time: thaiTime, 
                         name: appState[id].status.prizeName || "Bonus",
                         img: appState[id].status.prizeImg, 
                         at: oldSince 
@@ -182,4 +182,60 @@ async function fetchData() {
                 appState[id].status = {
                     since: newSince,
                     target: s.nextStageAt || appState[id].status.target,
-                    stage: s.stage !== undefined ? s.
+                    stage: s.stage !== undefined ? s.stage : appState[id].status.stage,
+                    prizeName: (s.prizeCard && s.prizeCard.name) ? s.prizeCard.name : appState[id].status.prizeName || "Target Bonus",
+                    prizeImg: bonusImg || appState[id].status.prizeImg
+                };
+            }
+
+            if (resPulls && resPulls.ok) {
+                const pData = await resPulls.json();
+                const pulls = Array.isArray(pData) ? pData : (pData.data || []);
+                if (pulls.length > 0) {
+                    if (appState[id].lastPullId === 0) {
+                        appState[id].lastPullId = pulls[0].id;
+                        pulls.slice(0, 30).reverse().forEach(i => processItem(id, i));
+                    } else {
+                        let news = pulls.filter(i => i.id > appState[id].lastPullId).reverse();
+                        if (news.length > 0) {
+                            news.forEach(i => processItem(id, i));
+                            appState[id].lastPullId = pulls[0].id;
+                        }
+                    }
+                }
+            }
+        } catch (e) { /* ข้ามแพ็คที่ API มีปัญหาไปก่อน */ }
+    }
+    
+    let toSave = {};
+    for(let id in appState) {
+        toSave[id] = { cards: appState[id].cards, bonusHistory: appState[id].bonusHistory };
+    }
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(toSave));
+    sendUpdate();
+}
+
+function sendUpdate() {
+    let payload = { packs: TARGET_PACKS, data: {} };
+    for (let id in appState) {
+        const probs = calculateProbs(id); 
+        const stats = calculateStats(id); 
+        const bonus = analyzeBonus(id); 
+        let top = "---"; let max = 0;
+        if (probs) { for (let t in probs) { if (parseFloat(probs[t]) > max) { max = parseFloat(probs[t]); top = t; } } }
+        
+        payload.data[id] = {
+            status: appState[id].status,
+            cards: appState[id].cards.slice(0, 30),
+            probs: probs, stats: stats, bonus: bonus, top: top,
+            bonusHistory: appState[id].bonusHistory 
+        };
+    }
+    io.emit('update_data', payload);
+}
+
+setInterval(fetchData, 3000);
+fetchData();
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`🚀 PokéTracker Multi-Target + Thai Time History Live on port ${PORT}!`));
