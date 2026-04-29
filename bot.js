@@ -25,7 +25,6 @@ const TARGET_PACKS = {
 const tierMap = { 'S': 'Shiny', 'A': 'Platinum', 'B': 'Gold', 'C': 'Silver', 'D': 'Bronze', 'Shiny': 'Shiny', 'Platinum': 'Platinum', 'Gold': 'Gold', 'Silver': 'Silver', 'Bronze': 'Bronze' };
 const defaultOdds = { 'Shiny': 0.005, 'Platinum': 0.062, 'Gold': 0.433, 'Silver': 0.075, 'Bronze': 0.425 };
 
-// 🟢 เพิ่มหน่วยความจำประวัติโบนัส (bonusHistory) ให้แต่ละแพ็ค
 let appState = {};
 for (let id in TARGET_PACKS) {
     appState[id] = {
@@ -33,19 +32,18 @@ for (let id in TARGET_PACKS) {
         odds: { ...defaultOdds },
         status: { since: 0, target: 200, stage: 0, prizeName: "", prizeImg: "" },
         cards: [],
-        bonusHistory: [] // เก็บประวัติโบนัสที่แตกไปแล้ว
+        bonusHistory: []
     };
 }
 
-// 🟢 ระบบโหลดเซฟ (ดัดแปลงให้รองรับการเซฟประวัติโบนัสด้วย)
 if (fs.existsSync(HISTORY_FILE)) {
     try {
         let saved = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
         for(let id in saved) { 
             if(appState[id]) {
-                if (Array.isArray(saved[id])) { // รองรับไฟล์เซฟเก่า
+                if (Array.isArray(saved[id])) { 
                     appState[id].cards = saved[id];
-                } else { // ไฟล์เซฟเวอร์ชันใหม่
+                } else { 
                     appState[id].cards = saved[id].cards || [];
                     appState[id].bonusHistory = saved[id].bonusHistory || [];
                 }
@@ -132,9 +130,16 @@ function processItem(id, item) {
     const tierName = tierMap[rawTier] || 'Bronze'; 
     let imgUrl = item.thumbnailUrl || item.image || "https://via.placeholder.com/100x140?text=No+Img";
     if (!imgUrl.startsWith('http')) imgUrl = BASE_URL + imgUrl;
+    
+    // 🟢 ดักจับชื่อคนเปิดจาก API (ครอบคลุมหลายรูปแบบที่เว็บอาจจะส่งมา)
+    const pullerName = item.username || (item.user && item.user.username) || item.playerName || item.nickname || "Anonymous";
 
     appState[id].cards.unshift({
-        tier: tierName, img: imgUrl, price: item.worth || item.value || item.price || 0, name: item.cardName || item.name || "Unknown Card"
+        tier: tierName, 
+        img: imgUrl, 
+        price: item.worth || item.value || item.price || 0, 
+        name: item.cardName || item.name || "Unknown Card",
+        puller: pullerName // ส่งชื่อคนเปิดไปหน้าเว็บ
     });
     if (appState[id].cards.length > MAX_MEMORY) appState[id].cards.pop();
 }
@@ -155,18 +160,19 @@ async function fetchData() {
                     bonusImg = s.prizeCard.thumbnailUrl.startsWith('http') ? s.prizeCard.thumbnailUrl : BASE_URL + s.prizeCard.thumbnailUrl;
                 }
                 
-                // 🟢 ระบบตรวจจับโบนัสแตก (ถ้าจำนวนใบถูกรีเซ็ตลดลงอย่างฮวบฮาบ = โบนัสแตกแล้ว!)
                 let newSince = s.opensWithoutWin !== undefined ? s.opensWithoutWin : appState[id].status.since;
                 let oldSince = appState[id].status.since;
                 
                 if (oldSince > 10 && newSince < oldSince && (oldSince - newSince > 10)) {
+                    // 🟢 บังคับใช้โซนเวลาไทย (Asia/Bangkok)
+                    const thaiTime = new Date().toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
+                    
                     appState[id].bonusHistory.unshift({
-                        time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                        time: thaiTime, // บันทึกเวลาไทย
                         name: appState[id].status.prizeName || "Bonus",
-                        img: appState[id].status.prizeImg, // เอารูปเป้าหมายก่อนหน้านี้มาโชว์
-                        at: oldSince // แตกที่กี่ใบ
+                        img: appState[id].status.prizeImg, 
+                        at: oldSince 
                     });
-                    // เก็บประวัติย้อนหลัง 5 รอบล่าสุด
                     if (appState[id].bonusHistory.length > 5) appState[id].bonusHistory.pop(); 
                 }
                 
@@ -176,61 +182,4 @@ async function fetchData() {
                 appState[id].status = {
                     since: newSince,
                     target: s.nextStageAt || appState[id].status.target,
-                    stage: s.stage !== undefined ? s.stage : appState[id].status.stage,
-                    prizeName: (s.prizeCard && s.prizeCard.name) ? s.prizeCard.name : appState[id].status.prizeName || "Target Bonus",
-                    prizeImg: bonusImg || appState[id].status.prizeImg
-                };
-            }
-
-            if (resPulls && resPulls.ok) {
-                const pData = await resPulls.json();
-                const pulls = Array.isArray(pData) ? pData : (pData.data || []);
-                if (pulls.length > 0) {
-                    if (appState[id].lastPullId === 0) {
-                        appState[id].lastPullId = pulls[0].id;
-                        pulls.slice(0, 30).reverse().forEach(i => processItem(id, i));
-                    } else {
-                        let news = pulls.filter(i => i.id > appState[id].lastPullId).reverse();
-                        if (news.length > 0) {
-                            news.forEach(i => processItem(id, i));
-                            appState[id].lastPullId = pulls[0].id;
-                        }
-                    }
-                }
-            }
-        } catch (e) { /* ข้ามแพ็คที่ API มีปัญหาไปก่อน */ }
-    }
-    
-    // 🟢 บันทึกข้อมูลและประวัติโบนัสทั้งหมดลงไฟล์ (จะได้ไม่หายตอนบอทรีสตาร์ท)
-    let toSave = {};
-    for(let id in appState) {
-        toSave[id] = { cards: appState[id].cards, bonusHistory: appState[id].bonusHistory };
-    }
-    fs.writeFileSync(HISTORY_FILE, JSON.stringify(toSave));
-    sendUpdate();
-}
-
-function sendUpdate() {
-    let payload = { packs: TARGET_PACKS, data: {} };
-    for (let id in appState) {
-        const probs = calculateProbs(id); 
-        const stats = calculateStats(id); 
-        const bonus = analyzeBonus(id); 
-        let top = "---"; let max = 0;
-        if (probs) { for (let t in probs) { if (parseFloat(probs[t]) > max) { max = parseFloat(probs[t]); top = t; } } }
-        
-        payload.data[id] = {
-            status: appState[id].status,
-            cards: appState[id].cards.slice(0, 30),
-            probs: probs, stats: stats, bonus: bonus, top: top,
-            bonusHistory: appState[id].bonusHistory // 🟢 ส่งประวัติให้หน้าเว็บ
-        };
-    }
-    io.emit('update_data', payload);
-}
-
-setInterval(fetchData, 3000);
-fetchData();
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 PokéTracker Multi-Target + History Tracker Live!`));
+                    stage: s.stage !== undefined ? s.
