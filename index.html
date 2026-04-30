@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poké Tracker Ultra - Absolute Precision</title>
+    <title>Poké Tracker Ultra - ROI Sniper</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Inter:wght@400;700&display=swap');
         
         :root { 
-            --red: #ff1f1f; --gold: #fbbf24; --bg: #0f172a; --panel: #1e293b;
+            --red: #ff1f1f; --gold: #fbbf24; --bg: #0f172a; --panel: #1e293b; --green: #22c55e;
             --Shiny: #f43f5e; --Platinum: #a855f7; --Gold: #fbbf24; --Silver: #94a3b8; --Bronze: #64748b; 
         }
 
@@ -29,13 +29,15 @@
         .radar-box { background: #111; padding: 15px; border-radius: 12px; text-align: center; border: 2px solid #333; }
         .r-val { font-size: 2.8rem; font-weight: 900; line-height: 1; font-family: 'Inter', sans-serif; letter-spacing: -1px; }
 
-        .prize-bar { background: var(--panel); margin: 0 20px 15px; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-direction: column; }
+        .prize-bar { background: var(--panel); margin: 0 20px 15px; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-direction: column; position: relative; overflow: hidden; }
         .prize-top { display: flex; align-items: center; gap: 15px; }
         .prize-img { width: 50px; height: 70px; object-fit: contain; border-radius: 5px; background: #000; border: 1px solid #444; }
         
-        .bonus-progress { margin-top: 15px; background: #0f172a; border-radius: 20px; height: 12px; position: relative; overflow: hidden; border: 1px solid #334155; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .bonus-progress { margin-top: 15px; background: #0f172a; border-radius: 20px; height: 16px; position: relative; overflow: hidden; border: 1px solid #334155; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .bonus-fill { background: var(--gold); height: 100%; width: 0%; transition: width 0.5s ease-out, background-color 0.5s; }
-        .mark-90 { position: absolute; left: 90%; top: 0; bottom: 0; width: 2px; background: var(--red); z-index: 2; box-shadow: 0 0 5px var(--red); }
+        
+        /* 🟢 ขยับเส้นแดงไปที่ 97% */
+        .mark-97 { position: absolute; left: 97%; top: 0; bottom: 0; width: 2px; background: var(--red); z-index: 2; box-shadow: 0 0 5px var(--red); }
         
         .history-container { margin-top: 15px; border-top: 1px dashed #334155; padding-top: 12px; display: none; gap: 10px; overflow-x: auto; scrollbar-width: none; }
         .history-card { flex: 0 0 65px; background: #111; border: 1px solid #444; border-radius: 8px; padding: 6px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
@@ -43,10 +45,8 @@
         
         .prob-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 0 20px 15px; }
         .prob-b { background: #111; padding: 8px 5px; border-radius: 8px; text-align: center; border: 1px solid #222; font-size: 0.6rem; position: relative; cursor: help; }
-        .prob-b:hover { background: #1a1a1a; }
         
-        /* ขยายขนาด Tooltip นิดนึงเพื่อรับข้อมูลใหม่ */
-        .tooltip { position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #111827; border: 1px solid #374151; padding: 12px; border-radius: 8px; width: 155px; box-shadow: 0 10px 25px rgba(0,0,0,0.9); display: none; z-index: 100; text-align: left; pointer-events: none; }
+        .tooltip { position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #111827; border: 1px solid #374151; padding: 12px; border-radius: 8px; width: 140px; box-shadow: 0 10px 25px rgba(0,0,0,0.9); display: none; z-index: 100; text-align: left; pointer-events: none; }
         .prob-b:hover .tooltip { display: block; }
         .tt-title { font-size: 0.65rem; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #374151; padding-bottom: 5px; display: flex; justify-content: space-between; }
         .tt-row { display: flex; justify-content: space-between; font-size: 0.55rem; margin-bottom: 6px; color: #94a3b8; font-family: 'Inter', sans-serif;}
@@ -54,7 +54,6 @@
 
         .feed { display: flex; gap: 10px; overflow-x: auto; padding: 0 20px 15px; scrollbar-width: none; cursor: grab; }
         .feed::-webkit-scrollbar { display: none; }
-        .feed:active { cursor: grabbing; }
         .card { flex: 0 0 100px; background: #1a1a1a; border-radius: 8px; border: 1px solid #333; padding: 8px; position: relative; text-align: center; user-select: none; }
         .card img { pointer-events: none; }
         .badge { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); font-size: 0.5rem; padding: 2px 8px; border-radius: 5px; font-weight: bold; color: white; text-transform: uppercase; z-index: 5; }
@@ -91,19 +90,25 @@
     </div>
 
     <div class="prize-bar">
-        <div class="prize-top">
+        <div style="position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.5); padding: 5px 10px; border-bottom-left-radius: 10px; font-size: 0.6rem; color: var(--gold); border-left: 1px solid #334155; border-bottom: 1px solid #334155;">💰 ROI CALCULATOR</div>
+        
+        <div class="prize-top" style="margin-top: 10px;">
             <img id="prize_img" class="prize-img" src="" onerror="this.src='https://via.placeholder.com/60x80/000/fff?text=?'">
             <div style="overflow: hidden; flex: 1;">
                 <div style="font-size: 0.55rem; color: #94a3b8;">CURRENT SNIPE TARGET</div>
                 <div id="prize_name" style="font-size: 0.85rem; font-weight: bold; color: var(--gold); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Scanning...</div>
+                <div id="prize_val" style="font-size: 0.7rem; color: var(--green); margin-top: 2px; font-family: 'Inter', sans-serif;">EST. VALUE: $0.00</div>
             </div>
         </div>
+        
         <div class="bonus-progress">
             <div id="b-fill" class="bonus-fill"></div>
-            <div class="mark-90" title="90% Safe Zone"></div>
+            <!-- 🟢 แก้ไขตรงนี้เป็นคลาสใหม่ mark-97 -->
+            <div class="mark-97" title="97% Safe Zone"></div>
         </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.6rem; margin-top: 8px; font-weight: bold;">
-            <span id="b-msg">กำลังวิเคราะห์ความปลอดภัย...</span>
+        
+        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; margin-top: 8px; font-weight: bold; font-family: 'Inter', sans-serif;">
+            <span id="b-msg">คำนวณต้นทุน...</span>
             <span id="b-pct" style="color: #fff;">0%</span>
         </div>
         
@@ -136,11 +141,8 @@
                 <div class="tooltip">
                     <div class="tt-title"><span style="color:${colors[t]}">${t}</span> <span id="tt-pct-${t}">0%</span></div>
                     <div class="tt-row"><span style="color:#fff; background:#333; padding:2px 5px; border-radius:3px; font-weight:bold;" id="tt-st-${t}">...</span></div>
-                    <div class="tt-row"><span>ผ่านมาแล้ว</span> <span id="tt-pass-${t}" style="color:#fff">0 ใบ</span></div>
-                    <div class="tt-row"><span>ค่าเฉลี่ยปกติ</span> <span id="tt-avg-${t}" style="color:#fff">~0 ใบ</span></div>
-                    <!-- 🟢 เพิ่มแถว 97% และ 99% ให้เห็นเป้าหมายชัดเจน -->
-                    <div class="tt-row" style="color:var(--gold); border-top:1px dashed #444; padding-top:5px; margin-top:5px;"><span>การันตีโซน 97%</span> <span id="tt-limit97-${t}" style="font-weight:bold;">~0 ใบ</span></div>
-                    <div class="tt-row" style="color:var(--red);"><span>การันตีโซน 99%</span> <span id="tt-limit99-${t}" style="font-weight:bold;">~0 ใบ</span></div>
+                    <div class="tt-row"><span>ออกครั้งล่าสุดเมื่อ</span> <span id="tt-pass-${t}" style="color:#fff">0 ใบที่แล้ว</span></div>
+                    <div class="tt-row" style="color:#94a3b8; border-top:1px dashed #444; padding-top:5px; margin-top:5px;"><span>*RNG ไม่มีระบบการันตี</span></div>
                 </div>
             </div>
         `;
@@ -186,6 +188,13 @@
 
         document.getElementById('prize_name').innerText = s.prizeName;
         if(s.prizeImg) document.getElementById('prize_img').src = s.prizeImg;
+        
+        const valEl = document.getElementById('prize_val');
+        if (s.prizeValue > 0) {
+            valEl.innerText = 'EST. VALUE: $' + Number(s.prizeValue).toLocaleString(undefined, {minimumFractionDigits: 2});
+        } else {
+            valEl.innerText = 'EST. VALUE: ??? (ต้องประเมินเอง)';
+        }
 
         if (d.bonus) {
             const fill = document.getElementById('b-fill');
@@ -194,10 +203,11 @@
             
             fill.style.width = d.bonus.percent + '%';
             fill.style.backgroundColor = d.bonus.color;
-            msg.innerText = d.bonus.status;
+            msg.innerHTML = d.bonus.status;
             msg.style.color = d.bonus.color;
             pct.innerText = d.bonus.percent + '%';
-            if(d.bonus.percent >= 90) pct.style.color = "var(--red)";
+            // 🟢 เปลี่ยนเงื่อนไขให้ตัวเลขเป็นสีแดงเมื่อถึง 97% เท่านั้น
+            if(d.bonus.percent >= 97) pct.style.color = "var(--red)";
             else pct.style.color = "#fff";
         }
         
@@ -227,22 +237,18 @@
                 let st = d.stats[t];
                 let miniText = "";
                 
-                // 🟢 แยกข้อความสถานะใหม่ แจ้งเตือนเป้าหมายชัดเจน
-                if (st.colorCode === 'ultra') {
-                    miniText = `<span style="color:#38bdf8; font-weight:bold; animation: pulse-red 0.5s infinite;">💎 99% แตกชัวร์!</span>`;
-                } else if (st.colorCode === 'danger') {
-                    miniText = `<span style="color:var(--red); font-weight:bold; animation: pulse-red 1s infinite;">🚨 97%+ อีก ~${st.remaining} ใบ(เข้า 99%)</span>`;
+                if (st.colorCode === 'danger') {
+                    miniText = `<span style="color:var(--red); font-weight:bold; animation: pulse-red 1s infinite;">🚨 เซิร์ฟอั้นจัด (${st.passed} ใบ)</span>`;
                 } else if (st.colorCode === 'warning') {
-                    miniText = `<span style="color:var(--gold)">🔥 ทะลุเฉลี่ย! รออีก ~${st.remaining} ใบ(เข้า 97%)</span>`;
+                    miniText = `<span style="color:var(--gold)">🔥 เลยเฉลี่ย (${st.passed} ใบ)</span>`;
                 } else {
-                    miniText = `<span style="color:#94a3b8">⏳ รออีก ~${st.remaining} ใบ (เข้า 97%)</span>`;
+                    miniText = `<span style="color:#94a3b8">⏳ ปกติ (${st.passed} ใบ)</span>`;
                 }
                 
                 document.getElementById('mini-' + t).innerHTML = miniText;
                 
                 let badgeBg = "#333"; let badgeColor = "#fff";
-                if(st.colorCode === 'ultra') { badgeBg = "#0284c7"; badgeColor = "#fff"; }
-                else if(st.colorCode === 'danger') { badgeBg = "var(--red)"; badgeColor = "#fff"; }
+                if(st.colorCode === 'danger') { badgeBg = "var(--red)"; badgeColor = "#fff"; }
                 else if(st.colorCode === 'warning') { badgeBg = "var(--gold)"; badgeColor = "#000"; }
                 else if(st.colorCode === 'early') { badgeBg = "#222"; badgeColor = "#64748b"; }
 
@@ -250,9 +256,6 @@
                 document.getElementById('tt-st-' + t).style.background = badgeBg;
                 document.getElementById('tt-st-' + t).style.color = badgeColor;
                 document.getElementById('tt-pass-' + t).innerText = st.passed + ' ใบ';
-                document.getElementById('tt-avg-' + t).innerText = '~' + st.average + ' ใบ';
-                document.getElementById('tt-limit97-' + t).innerText = '~' + st.limit97 + ' ใบ'; // โชว์ใบที่ 97%
-                document.getElementById('tt-limit99-' + t).innerText = '~' + st.limit99 + ' ใบ'; // โชว์ใบที่ 99%
             }
         }
 
