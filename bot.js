@@ -85,7 +85,6 @@ function calculateStats(id) {
         if (prob <= 0) prob = 0.0001;
         let expected = Math.round(1 / prob); 
         
-        // 🟢 จุดชี้วัดความแม่นยำ
         let limit97 = Math.round(Math.log(0.03) / Math.log(1 - prob));
         let limit99 = Math.round(Math.log(0.01) / Math.log(1 - prob));
 
@@ -97,38 +96,19 @@ function calculateStats(id) {
 
         let statusMsg = ""; 
         let colorCode = "normal";
-        let displayRemaining = 0; // 🟢 ตัวแปรนับถอยหลังที่หายไป
+        let displayRemaining = 0;
         
         if (passed >= limit99) { 
-            statusMsg = "💎 99% แตกชัวร์!"; 
-            colorCode = "ultra"; 
-            displayRemaining = 0; 
-        } 
-        else if (passed >= limit97) { 
-            statusMsg = "🚨 การันตี 97%+"; 
-            colorCode = "danger"; 
-            displayRemaining = limit99 - passed; // นับไปหาจุด 99%
-        } 
-        else if (passed >= expected) { 
-            statusMsg = "🔥 ทะลุค่าเฉลี่ย"; 
-            colorCode = "warning"; 
-            displayRemaining = limit97 - passed; // นับไปหาจุด 97%
-        } 
-        else { 
-            statusMsg = "⏳ รอสะสมเกจ"; 
-            colorCode = "early"; 
-            displayRemaining = limit97 - passed; // นับไปหาจุด 97%
+            statusMsg = "💎 99% แตกชัวร์!"; colorCode = "ultra"; displayRemaining = 0; 
+        } else if (passed >= limit97) { 
+            statusMsg = "🚨 การันตี 97%+"; colorCode = "danger"; displayRemaining = limit99 - passed; 
+        } else if (passed >= expected) { 
+            statusMsg = "🔥 ทะลุค่าเฉลี่ย"; colorCode = "warning"; displayRemaining = limit97 - passed; 
+        } else { 
+            statusMsg = "⏳ รอสะสมเกจ"; colorCode = "early"; displayRemaining = limit97 - passed; 
         }
 
-        stats[t] = { 
-            average: expected, 
-            passed: passed, 
-            remaining: displayRemaining > 0 ? displayRemaining : 0,  // 🟢 ส่งค่าไปให้หน้าเว็บแสดงผล
-            limit97: limit97,
-            limit99: limit99,
-            status: statusMsg, 
-            colorCode: colorCode 
-        };
+        stats[t] = { average: expected, passed: passed, remaining: displayRemaining > 0 ? displayRemaining : 0, limit97: limit97, limit99: limit99, status: statusMsg, colorCode: colorCode };
     }
     return stats;
 }
@@ -141,17 +121,16 @@ function analyzeBonus(id) {
 
     let percent = (since / target) * 100;
     let pullsTo100 = target - since;  
-    
-    // 💰 คำนวณต้นทุนที่ต้องใช้แน่ๆ เพื่อปิดโบนัส
     let guaranteedCost = pullsTo100 * packPrice;
 
     let statusMsg = ""; let color = "#94a3b8";
 
+    // 🟢 เปลี่ยนเงื่อนไขการเตือนเป็น 97%
     if (percent >= 100) { 
         statusMsg = `🔥 ยิงด่วน! ใช้ทุน $0 (แตกฟรี)`; color = "var(--red)"; 
-    } else if (percent >= 90) { 
+    } else if (percent >= 97) { 
         statusMsg = `🎯 ใช้ทุนปิดจ๊อบ: $${guaranteedCost.toFixed(2)}`; color = "var(--Gold)"; 
-    } else if (percent >= 75) { 
+    } else if (percent >= 85) { // ขยับโซนวอร์มอัพเป็น 85%
         statusMsg = `⚠️ ต้นทุนปิดจ๊อบตอนนี้: $${guaranteedCost.toFixed(2)}`; color = "var(--Platinum)"; 
     } else { 
         statusMsg = `❄️ ยังแพงไป (ทุนปิด $${guaranteedCost.toFixed(2)})`; color = "#94a3b8"; 
