@@ -35,8 +35,6 @@
         
         .bonus-progress { margin-top: 15px; background: #0f172a; border-radius: 20px; height: 16px; position: relative; overflow: hidden; border: 1px solid #334155; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
         .bonus-fill { background: var(--gold); height: 100%; width: 0%; transition: width 0.5s ease-out, background-color 0.5s; }
-        
-        /* 🟢 ขยับเส้นแดงไปที่ 97% */
         .mark-97 { position: absolute; left: 97%; top: 0; bottom: 0; width: 2px; background: var(--red); z-index: 2; box-shadow: 0 0 5px var(--red); }
         
         .history-container { margin-top: 15px; border-top: 1px dashed #334155; padding-top: 12px; display: none; gap: 10px; overflow-x: auto; scrollbar-width: none; }
@@ -64,6 +62,12 @@
         @keyframes pulse-scan { 50% { opacity: 0.4; } }
         
         .b-Shiny { background: var(--Shiny); box-shadow: 0 0 8px var(--Shiny); } .b-Platinum { background: var(--Platinum); } .b-Gold { background: var(--Gold); color: black; } .b-Silver { background: var(--Silver); } .b-Bronze { background: var(--Bronze); }
+
+        /* 🟢 สไตล์ช่องกรอกราคา */
+        .manual-input { width: 65px; background: #000; border: 1px solid #334155; color: var(--green); padding: 2px 5px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; outline: none; font-family: 'Inter', sans-serif; text-align: center;}
+        .manual-input:focus { border-color: var(--gold); }
+        /* ซ่อนลูกศรใน input number */
+        .manual-input::-webkit-outer-spin-button, .manual-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body>
@@ -97,13 +101,18 @@
             <div style="overflow: hidden; flex: 1;">
                 <div style="font-size: 0.55rem; color: #94a3b8;">CURRENT SNIPE TARGET</div>
                 <div id="prize_name" style="font-size: 0.85rem; font-weight: bold; color: var(--gold); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Scanning...</div>
-                <div id="prize_val" style="font-size: 0.7rem; color: var(--green); margin-top: 2px; font-family: 'Inter', sans-serif;">EST. VALUE: $0.00</div>
+                
+                <!-- 🟢 โซนกรอกราคาและโชว์กำไร -->
+                <div style="font-size: 0.7rem; margin-top: 4px; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 5px;">
+                    <span style="color: #94a3b8;">EST. VALUE: $</span>
+                    <input type="number" id="manual_prize_val" class="manual-input" placeholder="ราคาตลาด" step="0.01">
+                    <span id="roi_result" style="font-weight: bold; font-size: 0.75rem;"></span>
+                </div>
             </div>
         </div>
         
         <div class="bonus-progress">
             <div id="b-fill" class="bonus-fill"></div>
-            <!-- 🟢 แก้ไขตรงนี้เป็นคลาสใหม่ mark-97 -->
             <div class="mark-97" title="97% Safe Zone"></div>
         </div>
         
@@ -150,9 +159,34 @@
 
     let currentPack = "pack1"; 
     let lastData = null;
+    let currentCost = 0; // 🟢 ตัวแปรเก็บต้นทุนล่าสุด
+
+    // 🟢 ฟังก์ชันคำนวณกำไร
+    function calculateROI() {
+        const valInput = document.getElementById('manual_prize_val').value;
+        const roiResult = document.getElementById('roi_result');
+        
+        if (!valInput || isNaN(valInput) || currentCost === 0) {
+            roiResult.innerHTML = '';
+            return;
+        }
+        
+        const estValue = parseFloat(valInput);
+        const profit = estValue - currentCost;
+        
+        if (profit > 0) {
+            roiResult.innerHTML = `(<span style="color: var(--green);">+$${profit.toFixed(2)} กำไรชัวร์!</span>)`;
+        } else {
+            roiResult.innerHTML = `(<span style="color: var(--red);">-$${Math.abs(profit).toFixed(2)} ขาดทุน</span>)`;
+        }
+    }
+
+    // 🟢 ดักจับเวลามีคนพิมพ์ราคา ให้คำนวณทันที
+    document.getElementById('manual_prize_val').addEventListener('input', calculateROI);
 
     document.getElementById('pack-selector').addEventListener('change', (e) => {
         currentPack = e.target.value;
+        document.getElementById('manual_prize_val').value = ''; // เคลียร์ช่องราคาเมื่อเปลี่ยนแพ็ค
         if(lastData) renderScreen(lastData.data[currentPack]); 
     });
 
@@ -189,12 +223,18 @@
         document.getElementById('prize_name').innerText = s.prizeName;
         if(s.prizeImg) document.getElementById('prize_img').src = s.prizeImg;
         
-        const valEl = document.getElementById('prize_val');
-        if (s.prizeValue > 0) {
-            valEl.innerText = 'EST. VALUE: $' + Number(s.prizeValue).toLocaleString(undefined, {minimumFractionDigits: 2});
-        } else {
-            valEl.innerText = 'EST. VALUE: ??? (ต้องประเมินเอง)';
+        // 🟢 อัปเดตต้นทุนปิดจ๊อบเพื่อนำไปคำนวณกำไร
+        if (d.bonus && d.bonus.cost) {
+            currentCost = parseFloat(d.bonus.cost);
         }
+
+        const valInput = document.getElementById('manual_prize_val');
+        // ถ้า API มีราคาส่งมาให้ และเรายังไม่ได้กรอกอะไรลงไป ให้ดึงมาใส่ให้อัตโนมัติเลย
+        if (s.prizeValue > 0 && valInput.value === '') {
+            valInput.value = s.prizeValue;
+        }
+        
+        calculateROI(); // สั่งคำนวณกำไรทุกครั้งที่อัปเดตหน้าจอ (เพราะต้นทุนขยับตลอด)
 
         if (d.bonus) {
             const fill = document.getElementById('b-fill');
@@ -206,7 +246,6 @@
             msg.innerHTML = d.bonus.status;
             msg.style.color = d.bonus.color;
             pct.innerText = d.bonus.percent + '%';
-            // 🟢 เปลี่ยนเงื่อนไขให้ตัวเลขเป็นสีแดงเมื่อถึง 97% เท่านั้น
             if(d.bonus.percent >= 97) pct.style.color = "var(--red)";
             else pct.style.color = "#fff";
         }
