@@ -18,7 +18,7 @@ const TARGET_PACKS = {
     "pack1": { name: "🔰 Beginner Pack", price: 15.00, urlPulls: "https://shiny.com/api/pack/11/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=1500&tcgType=Pokemon" },
     "pack2": { name: "⚔️ Starter Pack", price: 25.00, urlPulls: "https://shiny.com/api/pack/3/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=2500&tcgType=Pokemon" },
     "pack3": { name: "🔥 Pro Pack", price: 50.00, urlPulls: "https://shiny.com/api/pack/4/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=5000&tcgType=Pokemon" },
-    "pack4": { name: "👑 OP Pack", price: 100.00, urlPulls: "https://shiny.com/api/pack/12/recent-pulls", urlStatus: "https://shiny.com/api/pack/12/latest-shiny" } // แพ็คนี้แก้ราคาตรงเลข 100.00 ได้เลยครับ
+    "pack4": { name: "👑 OP Pack", price: 100.00, urlPulls: "https://shiny.com/api/pack/12/recent-pulls", urlStatus: "https://shiny.com/api/pack/12/latest-shiny" } 
 };
 // ==========================================
 
@@ -85,7 +85,9 @@ function calculateStats(id) {
         if (prob <= 0) prob = 0.0001;
         let expected = Math.round(1 / prob); 
         
+        // 🟢 จุดชี้วัดความแม่นยำ
         let limit97 = Math.round(Math.log(0.03) / Math.log(1 - prob));
+        let limit99 = Math.round(Math.log(0.01) / Math.log(1 - prob));
 
         let passed = 0;
         for (let i = 0; i < history.length; i++) {
@@ -93,17 +95,40 @@ function calculateStats(id) {
             passed++;
         }
 
-        let statusMsg = ""; let colorCode = "normal";
+        let statusMsg = ""; 
+        let colorCode = "normal";
+        let displayRemaining = 0; // 🟢 ตัวแปรนับถอยหลังที่หายไป
         
-        if (passed >= limit97) { 
-            statusMsg = "🚨 เซิร์ฟเวอร์อั้นจัด (Dry Streak)"; colorCode = "danger"; 
-        } else if (passed >= expected) { 
-            statusMsg = "🔥 เลยค่าเฉลี่ยปกติ"; colorCode = "warning"; 
-        } else { 
-            statusMsg = "⏳ อยู่ในเกณฑ์ปกติ"; colorCode = "early"; 
+        if (passed >= limit99) { 
+            statusMsg = "💎 99% แตกชัวร์!"; 
+            colorCode = "ultra"; 
+            displayRemaining = 0; 
+        } 
+        else if (passed >= limit97) { 
+            statusMsg = "🚨 การันตี 97%+"; 
+            colorCode = "danger"; 
+            displayRemaining = limit99 - passed; // นับไปหาจุด 99%
+        } 
+        else if (passed >= expected) { 
+            statusMsg = "🔥 ทะลุค่าเฉลี่ย"; 
+            colorCode = "warning"; 
+            displayRemaining = limit97 - passed; // นับไปหาจุด 97%
+        } 
+        else { 
+            statusMsg = "⏳ รอสะสมเกจ"; 
+            colorCode = "early"; 
+            displayRemaining = limit97 - passed; // นับไปหาจุด 97%
         }
 
-        stats[t] = { average: expected, passed: passed, status: statusMsg, colorCode: colorCode };
+        stats[t] = { 
+            average: expected, 
+            passed: passed, 
+            remaining: displayRemaining > 0 ? displayRemaining : 0,  // 🟢 ส่งค่าไปให้หน้าเว็บแสดงผล
+            limit97: limit97,
+            limit99: limit99,
+            status: statusMsg, 
+            colorCode: colorCode 
+        };
     }
     return stats;
 }
@@ -117,7 +142,7 @@ function analyzeBonus(id) {
     let percent = (since / target) * 100;
     let pullsTo100 = target - since;  
     
-    // 💰 คำนวณต้นทุนที่ต้องใช้แน่ๆ เพื่อปิดโบนัส (คูณราคาแพ็คจริง)
+    // 💰 คำนวณต้นทุนที่ต้องใช้แน่ๆ เพื่อปิดโบนัส
     let guaranteedCost = pullsTo100 * packPrice;
 
     let statusMsg = ""; let color = "#94a3b8";
