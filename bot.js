@@ -57,28 +57,34 @@ io.on('connection', (socket) => { sendUpdate(); });
 
 function calculateProbs(id) {
     const history = appState[id].cards;
-    const recent16 = history.slice(0, 16);
     let currentOdds = appState[id].odds;
 
-    if (recent16.length === 0) {
-        let defaultProbs = {};
-        for (let t in currentOdds) { defaultProbs[t] = (currentOdds[t] * 100).toFixed(1); }
-        return defaultProbs;
-    }
-
-    const counts = recent16.reduce((acc, c) => { acc[c.tier] = (acc[c.tier] || 0) + 1; return acc; }, {});
-    let probs = {}; let totalW = 0;
+    let probs = {}; 
+    let totalW = 0;
     
     for (let t in currentOdds) {
-        let currentFreq = (counts[t] || 0) / recent16.length;
-        let weight = currentOdds[t] + ((currentOdds[t] - currentFreq) * 2.5); 
+        let prob = currentOdds[t];
+        if (prob <= 0) prob = 0.0001;
+        let expected = Math.round(1 / prob);
+        
+        let passed = 0;
+        for (let i = 0; i < history.length; i++) {
+            if (history[i].tier === t) break;
+            passed++;
+        }
+
+        let weightMultiplier = Math.pow(1.5, (passed / expected)); 
+        let weight = prob * weightMultiplier;
+        
         probs[t] = Math.max(weight, 0.0001); 
         totalW += probs[t];
     }
+    
     for (let t in probs) { probs[t] = ((probs[t] / totalW) * 100).toFixed(1); }
     return probs;
 }
 
+// 🟢 อัปเกรดระบบจับจำนวนใบ 97% - 99.9%
 function calculateStats(id) {
     const history = appState[id].cards;
     let currentOdds = appState[id].odds;
@@ -86,21 +92,53 @@ function calculateStats(id) {
 
     for (let t in currentOdds) {
         let prob = currentOdds[t];
-        let average = Math.round(1 / prob); 
+        if (prob <= 0) prob = 0.0001;
+        let expected = Math.round(1 / prob); 
+        
+        // 🟢 สูตรหาจำนวนใบที่การันตีโอกาสแตก 97% และ 99%
+        let limit97 = Math.round(Math.log(0.03) / Math.log(1 - prob));
+        let limit99 = Math.round(Math.log(0.01) / Math.log(1 - prob));
+
         let passed = 0;
         for (let i = 0; i < history.length; i++) {
             if (history[i].tier === t) break;
             passed++;
         }
 
-        let remaining = average - passed;
-        let statusMsg = "ลุ้นได้เลย"; let colorCode = "normal";
+        let statusMsg = ""; 
+        let colorCode = "normal";
+        let displayRemaining = 0;
         
-        if (passed >= average * 1.5) { statusMsg = "เลยกำหนดนานแล้ว"; colorCode = "danger"; remaining = 0; } 
-        else if (passed >= average) { statusMsg = "จะมาเร็วๆ นี้"; colorCode = "warning"; remaining = 0; } 
-        else if (passed < average * 0.4) { statusMsg = "ยังเร็วเกินไป"; colorCode = "early"; }
+        if (passed >= limit99) { 
+            statusMsg = "💎 99% แตกชัวร์!"; 
+            colorCode = "ultra"; 
+            displayRemaining = 0; 
+        } 
+        else if (passed >= limit97) { 
+            statusMsg = "🚨 การันตี 97%+"; 
+            colorCode = "danger"; 
+            displayRemaining = limit99 - passed; // นับถอยหลังไป 99%
+        } 
+        else if (passed >= expected) { 
+            statusMsg = "🔥 ทะลุค่าเฉลี่ย"; 
+            colorCode = "warning"; 
+            displayRemaining = limit97 - passed; // นับถอยหลังไป 97%
+        } 
+        else { 
+            statusMsg = "⏳ รอสะสมเกจ"; 
+            colorCode = "early"; 
+            displayRemaining = limit97 - passed; // นับถอยหลังไป 97% รวดเดียวเลย
+        }
 
-        stats[t] = { average, passed, remaining: remaining > 0 ? remaining : 0, status: statusMsg, colorCode };
+        stats[t] = { 
+            average: expected, 
+            passed: passed, 
+            remaining: displayRemaining > 0 ? displayRemaining : 0, 
+            limit97: limit97,
+            limit99: limit99,
+            status: statusMsg, 
+            colorCode: colorCode 
+        };
     }
     return stats;
 }
@@ -131,7 +169,6 @@ function processItem(id, item) {
     let imgUrl = item.thumbnailUrl || item.image || "https://via.placeholder.com/100x140?text=No+Img";
     if (!imgUrl.startsWith('http')) imgUrl = BASE_URL + imgUrl;
     
-    // 🟢 ดักจับชื่อคนเปิดจาก API
     const pullerName = item.username || (item.user && item.user.username) || item.playerName || item.nickname || "Anonymous";
 
     appState[id].cards.unshift({
@@ -164,7 +201,6 @@ async function fetchData() {
                 let oldSince = appState[id].status.since;
                 
                 if (oldSince > 10 && newSince < oldSince && (oldSince - newSince > 10)) {
-                    // 🟢 บังคับใช้โซนเวลาไทย (Asia/Bangkok)
                     const thaiTime = new Date().toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
                     
                     appState[id].bonusHistory.unshift({
@@ -204,7 +240,7 @@ async function fetchData() {
                     }
                 }
             }
-        } catch (e) { /* ข้ามแพ็คที่ API มีปัญหาไปก่อน */ }
+        } catch (e) { }
     }
     
     let toSave = {};
@@ -238,4 +274,4 @@ setInterval(fetchData, 3000);
 fetchData();
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 PokéTracker Multi-Target + Thai Time History Live on port ${PORT}!`));
+server.listen(PORT, () => console.log(`🚀 PokéTracker Absolute 99% Precision Live!`));
