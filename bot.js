@@ -11,16 +11,12 @@ const HISTORY_FILE = 'history.json';
 const MAX_MEMORY = 500; 
 const BASE_URL = "https://shiny.com"; 
 
-// ==========================================
-// 🎯 อัปเดตราคาแพ็คตามข้อมูลจริงของคุณ
-// ==========================================
 const TARGET_PACKS = {
     "pack1": { name: "🔰 Beginner Pack", price: 15.00, urlPulls: "https://shiny.com/api/pack/11/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=1500&tcgType=Pokemon" },
     "pack2": { name: "⚔️ Starter Pack", price: 25.00, urlPulls: "https://shiny.com/api/pack/3/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=2500&tcgType=Pokemon" },
     "pack3": { name: "🔥 Pro Pack", price: 50.00, urlPulls: "https://shiny.com/api/pack/4/recent-pulls", urlStatus: "https://shiny.com/api/jackpot/state?tier=5000&tcgType=Pokemon" },
     "pack4": { name: "👑 OP Pack", price: 100.00, urlPulls: "https://shiny.com/api/pack/12/recent-pulls", urlStatus: "https://shiny.com/api/pack/12/latest-shiny" } 
 };
-// ==========================================
 
 const tierMap = { 'S': 'Shiny', 'A': 'Platinum', 'B': 'Gold', 'C': 'Silver', 'D': 'Bronze', 'Shiny': 'Shiny', 'Platinum': 'Platinum', 'Gold': 'Gold', 'Silver': 'Silver', 'Bronze': 'Bronze' };
 const defaultOdds = { 'Shiny': 0.005, 'Platinum': 0.062, 'Gold': 0.433, 'Silver': 0.075, 'Bronze': 0.425 };
@@ -75,6 +71,7 @@ function calculateProbs(id) {
     return probs;
 }
 
+// 🟢 อัปเกรดให้คำนวณตัวเลขนับถอยหลังส่งไปให้หน้าเว็บ
 function calculateStats(id) {
     const history = appState[id].cards;
     let currentOdds = appState[id].odds;
@@ -84,7 +81,6 @@ function calculateStats(id) {
         let prob = currentOdds[t];
         if (prob <= 0) prob = 0.0001;
         let expected = Math.round(1 / prob); 
-        
         let limit97 = Math.round(Math.log(0.03) / Math.log(1 - prob));
         let limit99 = Math.round(Math.log(0.01) / Math.log(1 - prob));
 
@@ -94,21 +90,19 @@ function calculateStats(id) {
             passed++;
         }
 
-        let statusMsg = ""; 
-        let colorCode = "normal";
-        let displayRemaining = 0;
-        
-        if (passed >= limit99) { 
-            statusMsg = "💎 99% แตกชัวร์!"; colorCode = "ultra"; displayRemaining = 0; 
-        } else if (passed >= limit97) { 
-            statusMsg = "🚨 การันตี 97%+"; colorCode = "danger"; displayRemaining = limit99 - passed; 
-        } else if (passed >= expected) { 
-            statusMsg = "🔥 ทะลุค่าเฉลี่ย"; colorCode = "warning"; displayRemaining = limit97 - passed; 
-        } else { 
-            statusMsg = "⏳ รอสะสมเกจ"; colorCode = "early"; displayRemaining = limit97 - passed; 
-        }
+        let colorCode = "early";
+        if (passed >= limit97) colorCode = "danger";
+        else if (passed >= expected) colorCode = "warning";
 
-        stats[t] = { average: expected, passed: passed, remaining: displayRemaining > 0 ? displayRemaining : 0, limit97: limit97, limit99: limit99, status: statusMsg, colorCode: colorCode };
+        stats[t] = { 
+            average: expected, 
+            passed: passed, 
+            limit97: limit97, 
+            limit99: limit99, 
+            countdownAvg: expected - passed > 0 ? expected - passed : 0, // นับไปหาค่าเฉลี่ย
+            countdown97: limit97 - passed > 0 ? limit97 - passed : 0,    // นับไปหา 97%
+            colorCode: colorCode 
+        };
     }
     return stats;
 }
@@ -125,12 +119,11 @@ function analyzeBonus(id) {
 
     let statusMsg = ""; let color = "#94a3b8";
 
-    // 🟢 เปลี่ยนเงื่อนไขการเตือนเป็น 97%
     if (percent >= 100) { 
         statusMsg = `🔥 ยิงด่วน! ใช้ทุน $0 (แตกฟรี)`; color = "var(--red)"; 
     } else if (percent >= 97) { 
         statusMsg = `🎯 ใช้ทุนปิดจ๊อบ: $${guaranteedCost.toFixed(2)}`; color = "var(--Gold)"; 
-    } else if (percent >= 85) { // ขยับโซนวอร์มอัพเป็น 85%
+    } else if (percent >= 85) { 
         statusMsg = `⚠️ ต้นทุนปิดจ๊อบตอนนี้: $${guaranteedCost.toFixed(2)}`; color = "var(--Platinum)"; 
     } else { 
         statusMsg = `❄️ ยังแพงไป (ทุนปิด $${guaranteedCost.toFixed(2)})`; color = "#94a3b8"; 
@@ -229,4 +222,4 @@ function sendUpdate() {
 
 setInterval(fetchData, 3000); fetchData();
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 PokéTracker Guaranteed ROI Mode Live!`));
+server.listen(PORT, () => console.log(`🚀 PokéTracker Absolute Sniper (Exact Countdown) Live!`));
