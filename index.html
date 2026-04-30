@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poké Tracker Ultra - ROI Sniper</title>
+    <title>Poké Tracker Ultra - Exact Sniper</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Inter:wght@400;700&display=swap');
         
@@ -48,7 +48,7 @@
         .prob-b:hover .tooltip { display: block; }
         .tt-title { font-size: 0.65rem; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #374151; padding-bottom: 5px; display: flex; justify-content: space-between; }
         .tt-row { display: flex; justify-content: space-between; font-size: 0.55rem; margin-bottom: 6px; color: #94a3b8; font-family: 'Inter', sans-serif;}
-        .stat-mini { font-size: 0.5rem; color: #94a3b8; margin-top: 5px; border-top: 1px solid #333; padding-top: 4px; }
+        .stat-mini { font-size: 0.48rem; color: #94a3b8; margin-top: 5px; border-top: 1px solid #333; padding-top: 4px; }
 
         .feed { display: flex; gap: 10px; overflow-x: auto; padding: 0 20px 15px; scrollbar-width: none; cursor: grab; }
         .feed::-webkit-scrollbar { display: none; }
@@ -63,10 +63,8 @@
         
         .b-Shiny { background: var(--Shiny); box-shadow: 0 0 8px var(--Shiny); } .b-Platinum { background: var(--Platinum); } .b-Gold { background: var(--Gold); color: black; } .b-Silver { background: var(--Silver); } .b-Bronze { background: var(--Bronze); }
 
-        /* 🟢 สไตล์ช่องกรอกราคา */
         .manual-input { width: 65px; background: #000; border: 1px solid #334155; color: var(--green); padding: 2px 5px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; outline: none; font-family: 'Inter', sans-serif; text-align: center;}
         .manual-input:focus { border-color: var(--gold); }
-        /* ซ่อนลูกศรใน input number */
         .manual-input::-webkit-outer-spin-button, .manual-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
@@ -102,7 +100,6 @@
                 <div style="font-size: 0.55rem; color: #94a3b8;">CURRENT SNIPE TARGET</div>
                 <div id="prize_name" style="font-size: 0.85rem; font-weight: bold; color: var(--gold); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Scanning...</div>
                 
-                <!-- 🟢 โซนกรอกราคาและโชว์กำไร -->
                 <div style="font-size: 0.7rem; margin-top: 4px; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 5px;">
                     <span style="color: #94a3b8;">EST. VALUE: $</span>
                     <input type="number" id="manual_prize_val" class="manual-input" placeholder="ราคาตลาด" step="0.01">
@@ -159,9 +156,8 @@
 
     let currentPack = "pack1"; 
     let lastData = null;
-    let currentCost = 0; // 🟢 ตัวแปรเก็บต้นทุนล่าสุด
+    let currentCost = 0; 
 
-    // 🟢 ฟังก์ชันคำนวณกำไร
     function calculateROI() {
         const valInput = document.getElementById('manual_prize_val').value;
         const roiResult = document.getElementById('roi_result');
@@ -181,12 +177,11 @@
         }
     }
 
-    // 🟢 ดักจับเวลามีคนพิมพ์ราคา ให้คำนวณทันที
     document.getElementById('manual_prize_val').addEventListener('input', calculateROI);
 
     document.getElementById('pack-selector').addEventListener('change', (e) => {
         currentPack = e.target.value;
-        document.getElementById('manual_prize_val').value = ''; // เคลียร์ช่องราคาเมื่อเปลี่ยนแพ็ค
+        document.getElementById('manual_prize_val').value = ''; 
         if(lastData) renderScreen(lastData.data[currentPack]); 
     });
 
@@ -223,18 +218,16 @@
         document.getElementById('prize_name').innerText = s.prizeName;
         if(s.prizeImg) document.getElementById('prize_img').src = s.prizeImg;
         
-        // 🟢 อัปเดตต้นทุนปิดจ๊อบเพื่อนำไปคำนวณกำไร
         if (d.bonus && d.bonus.cost) {
             currentCost = parseFloat(d.bonus.cost);
         }
 
         const valInput = document.getElementById('manual_prize_val');
-        // ถ้า API มีราคาส่งมาให้ และเรายังไม่ได้กรอกอะไรลงไป ให้ดึงมาใส่ให้อัตโนมัติเลย
         if (s.prizeValue > 0 && valInput.value === '') {
             valInput.value = s.prizeValue;
         }
         
-        calculateROI(); // สั่งคำนวณกำไรทุกครั้งที่อัปเดตหน้าจอ (เพราะต้นทุนขยับตลอด)
+        calculateROI(); 
 
         if (d.bonus) {
             const fill = document.getElementById('b-fill');
@@ -276,12 +269,16 @@
                 let st = d.stats[t];
                 let miniText = "";
                 
+                // 🟢 สร้างตัวแปรชื่อย่อให้หน้าจอแสดงผลได้ตรงคำขอ (เช่น GOLD, SHINY)
+                let shortName = t === 'Shiny' ? 'SHINY' : t === 'Platinum' ? 'PLAT' : t === 'Gold' ? 'GOLD' : t === 'Silver' ? 'SILV' : 'BRON';
+                
+                // 🟢 ข้อความใหม่: ตรงไปตรงมา "อีก x ใบออก..."
                 if (st.colorCode === 'danger') {
-                    miniText = `<span style="color:var(--red); font-weight:bold; animation: pulse-red 1s infinite;">🚨 เซิร์ฟอั้นจัด (${st.passed} ใบ)</span>`;
+                    miniText = `<span style="color:var(--red); font-weight:bold; animation: pulse-red 1s infinite;">🚨 แตกชัวร์! (เลยมา ${st.passed} ใบ)</span>`;
                 } else if (st.colorCode === 'warning') {
-                    miniText = `<span style="color:var(--gold)">🔥 เลยเฉลี่ย (${st.passed} ใบ)</span>`;
+                    miniText = `<span style="color:var(--gold); font-weight:bold;">🔥 อีก ~${st.countdown97} ใบออก ${shortName}</span>`;
                 } else {
-                    miniText = `<span style="color:#94a3b8">⏳ ปกติ (${st.passed} ใบ)</span>`;
+                    miniText = `<span style="color:#94a3b8; font-weight:bold;">⏳ อีก ~${st.countdownAvg} ใบออก ${shortName}</span>`;
                 }
                 
                 document.getElementById('mini-' + t).innerHTML = miniText;
@@ -291,7 +288,7 @@
                 else if(st.colorCode === 'warning') { badgeBg = "var(--gold)"; badgeColor = "#000"; }
                 else if(st.colorCode === 'early') { badgeBg = "#222"; badgeColor = "#64748b"; }
 
-                document.getElementById('tt-st-' + t).innerText = st.status;
+                document.getElementById('tt-st-' + t).innerText = (st.colorCode === 'danger') ? 'อั้นจัด' : ((st.colorCode === 'warning') ? 'ทะลุเฉลี่ย' : 'ปกติ');
                 document.getElementById('tt-st-' + t).style.background = badgeBg;
                 document.getElementById('tt-st-' + t).style.color = badgeColor;
                 document.getElementById('tt-pass-' + t).innerText = st.passed + ' ใบ';
